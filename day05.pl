@@ -16,31 +16,23 @@ EOF
 # open my $in, '<', \$test or die "bad open: $!";
 open my $in, '<', 'input/day05.txt' or die "bad open: $!";
 
-my $ship;
+my @ship_lines;
 {
   local $/ = "\n\n";
-  $ship = <$in>;
+  my $ship = <$in>;
+  (undef, @ship_lines) = reverse grep {; length } split /\n/, $ship;
 }
 
-# read the ship
-my @ship_lines = reverse grep {; length } split /\n/, $ship;
-
-# header
-my @keys = grep {; /\d/ } split /(\d)/, shift @ship_lines;
-
-my @stacks1;
-my @stacks2;
+my (@stacks1, @stacks2);
 
 for my $line (@ship_lines) {
   my $n = 0;
 
-  while ($line) {
+  for my $crate (unpack '(a4)*', $line) {
     $n++;
-
-    my $crate = substr $line, 0, 4, '';
-    next unless $crate =~ /[A-Z]/;
-
     $crate =~ s/[^A-Z]*//g;
+    next unless $crate;
+
     push $stacks1[$n]->@*, $crate;
     push $stacks2[$n]->@*, $crate;
   }
@@ -48,23 +40,9 @@ for my $line (@ship_lines) {
 
 while (my $line = <$in>) {
   my ($n, $from, $to) = $line =~ /move (\d+) from (\d+) to (\d+)/;
-
-  # part 1
-  for (1..$n) {
-    push $stacks1[$to]->@*, pop $stacks1[$from]->@*;
-  }
-
-  # part 2
-  my @to_push;
-  for (1..$n) {
-    push @to_push, pop $stacks2[$from]->@*;
-  }
-
-  push $stacks2[$to]->@*, reverse @to_push;
+  push $stacks1[$to]->@*, pop $stacks1[$from]->@*  for 1..$n;
+  push $stacks2[$to]->@*, splice $stacks2[$from]->@*, -1 * $n;
 }
 
-my $answer1 = join '', map {; $_->[-1] } grep {; defined } @stacks1;
-my $answer2 = join '', map {; $_->[-1] } grep {; defined } @stacks2;
-
-say $answer1;
-say $answer2;
+say "part 1: " . join '', map {; $_->[-1] // '' } @stacks1;
+say "part 2: " . join '', map {; $_->[-1] // '' } @stacks2;
