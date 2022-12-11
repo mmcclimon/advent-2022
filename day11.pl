@@ -3,34 +3,11 @@ use v5.36;
 open my $in, '<', 'input/day11.txt' or die "bad open: $!";
 
 my @hunks = do { local $/ = "\n\n"; <$in> };
-my @monkeys = map {; Monkey->from_hunk($_) } @hunks;
+my $set = MonkeySet->new([ map {; Monkey->from_hunk($_) } @hunks ]);
+my $lcm = $set->lcm;
 
-my $GLOBAL_LCM = 1;
-$GLOBAL_LCM *= $_->divisor for @monkeys;
-
-sub do_round ($part) {
-  for my $monkey (@monkeys) {
-    my @to_distribute = $monkey->take_turn($part);
-    for my $pair (@to_distribute) {
-      my ($n, $item) = @$pair;
-      $monkeys[$n]->add_item($item);
-    }
-  }
-}
-
-sub calc_result {
-  my ($x, $y) = sort { $b <=> $a } map {; $_->items_seen } @monkeys;
-  return $x * $y;
-}
-
-do_round(1) for 1..20;
-say "part 1: " . calc_result();
-
-$_->reset for @monkeys;
-
-do_round(2) for 1..10_000;
-say "part 2: " . calc_result();
-
+say "part 1: " . $set->do_rounds(20,     sub ($n) { int($n / 3) });
+say "part 2: " . $set->do_rounds(10_000, sub ($n) { $n % $lcm   });
 
 package Monkey {
   sub from_hunk ($class, $hunk) {
@@ -71,28 +48,20 @@ package Monkey {
     }, $class;
   }
 
-  sub take_turn ($self, $part) {
+  sub take_turn ($self, $adjust) {
     my @ret;
 
     while (my $item = shift $self->{items}->@*) {
-      push @ret, $self->consider_item($item, $part);
+      $self->{total_seen}++;
+
+      $item = $self->{worry_op}->($item);
+      $item = $adjust->($item);
+
+      my $to = $self->{toss_op}->($item);
+      push @ret, [$to => $item];
     }
 
     return @ret;
-  }
-
-  sub consider_item ($self, $item, $part) {
-    $self->{total_seen}++;
-    $item = $self->{worry_op}->($item);
-
-    if ($part == 1) {
-      $item = int($item / 3);
-    }
-
-    $item %= $GLOBAL_LCM;
-
-    my $to = $self->{toss_op}->($item);
-    return [$to => $item];
   }
 
   sub add_item ($self, $item) {
@@ -106,5 +75,40 @@ package Monkey {
 
   sub items_seen { $_[0]->{total_seen} }
   sub divisor    { $_[0]->{divisor}    }
+}
 
+package MonkeySet {
+  sub new ($class, $monkeys) { bless $monkeys, $class }
+
+  sub lcm ($self) {
+    state $lcm //= do {
+      my $lcm = 1;
+      $lcm *= $_->divisor for @$self;
+      $lcm
+    };
+
+    return $lcm;
+  }
+
+  sub do_rounds ($self, $n_rounds, $adjust) {
+    $_->reset for @$self;
+
+    for (1..$n_rounds) {
+      $self->do_round($adjust);
+    }
+
+    my ($x, $y) = sort { $b <=> $a } map {; $_->items_seen } @$self;
+    return $x * $y;
+  }
+
+
+  sub do_round ($self, $part) {
+    for my $monkey (@$self) {
+      my @to_distribute = $monkey->take_turn($part);
+      for my $pair (@to_distribute) {
+        my ($n, $item) = @$pair;
+        $self->[$n]->add_item($item);
+      }
+    }
+  }
 }
