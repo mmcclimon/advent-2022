@@ -2,7 +2,7 @@ use v5.36;
 
 open my $in, '<', 'input/day20.txt' or die "bad open: $!";
 my @arr = <$in>;
-chomp (@arr);
+chomp(@arr);
 
 do_part(1);
 do_part(2);
@@ -28,8 +28,6 @@ sub do_part ($n) {
   say "part $n: " . $loop->grove_coords;
 }
 
-
-
 package Node {
   sub new ($class, $val) { bless { value => $val }, $class }
 }
@@ -43,7 +41,7 @@ package Loop {
       len => 1,
       cur => $root,
       arr => [ $root ],
-      head => $root,
+      zero => undef,
     }, $class;
   }
 
@@ -57,6 +55,8 @@ package Loop {
     $node->{next} = $succ;
     $node->{prev} = $prev;
 
+    $self->{zero} = $node if $node->{value} == 0;
+
     push $self->{arr}->@*, $node;
     $self->{cur} = $node;
     $self->{len}++;
@@ -66,7 +66,7 @@ package Loop {
 
   sub debug ($self) {
     my @s;
-    my $cur = $self->{head};
+    my $cur = $self->{arr}->[0];
 
     for (1..$self->{len}) {
       push @s, $cur->{value};
@@ -81,20 +81,20 @@ package Loop {
       my $to_move = $node->{value} % ($self->{len} - 1);
       next unless $to_move;
 
-      $self->{head} = $node->{next} if $node eq $self->{head};
+      # first snip out node
+      $node->{prev}{next} = $node->{next};
+      $node->{next}{prev} = $node->{prev};
 
-      for (0.. $to_move - 1) {
-        my $prev = $node->{prev};
-        my $next = $node->{next};
+      # walk to the end
+      my $cur = $node->{next};
+      $cur = $cur->{next} for 1..$to_move;
 
-        $node->{prev} = $next;
-        $node->{next} = $next->{next};
-        $node->{next}{prev} = $node;
+      # insert this node just before $cur
+      $node->{prev} = $cur->{prev};
+      $node->{prev}{next} = $node;
 
-        $prev->{next} = $next;
-        $next->{next} = $node;
-        $next->{prev} = $prev;
-      }
+      $node->{next} = $cur;
+      $cur->{prev} = $node;
     }
   }
 
@@ -102,11 +102,7 @@ package Loop {
     my %relevant = map {; ($_ % $self->{len}) => 1 }  (1000, 2000, 3000);
     die "ohno, grove coordinates are the same?" unless %relevant == 3;
 
-    # start from 0.
-    my $cur = $self->{head};
-    while ($cur->{value} != 0) {
-      $cur = $cur->{next};
-    }
+    my $cur = $self->{zero};
 
     my @grove;
     for my $i (0..$self->{len} - 1) {
@@ -121,4 +117,3 @@ package Loop {
     return $grove[0] + $grove[1] + $grove[2];
   }
 }
-
