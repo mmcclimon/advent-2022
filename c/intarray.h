@@ -4,10 +4,11 @@
 typedef struct {
   int len;
   int cap;
-  int *array;
+  int *data;
 } intarray;
 
-void intarray_init(intarray *arr);
-void intarray_append(intarray *arr, int elem);
+void intarray_init(intarray *ia);
+void intarray_append(intarray *ia, int elem);
+void intarray_sort_descending(intarray *ia);
 
 #endif

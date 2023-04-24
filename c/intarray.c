@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,14 +6,14 @@
 
 #define INTARRAY_GROW_CAP(cap) ((cap) < 8 ? 8 : (cap)*2)
 
-void intarray_init(intarray *arr) {
-  arr->len = 0;
-  arr->cap = 0;
-  arr->array = NULL;
+void intarray_init(intarray *ia) {
+  ia->len = 0;
+  ia->cap = 0;
+  ia->data = NULL;
 }
 
-int *intarray_grow_array(int *array, int newcap) {
-  void *result = realloc(array, sizeof(int) * newcap);
+int *intarray_grow_array(int *ia, int newcap) {
+  void *result = realloc(ia, sizeof(int) * newcap);
 
   if (result == NULL) {
     perror("could not reallocate array");
@@ -22,12 +23,25 @@ int *intarray_grow_array(int *array, int newcap) {
   return (int *)result;
 }
 
-void intarray_append(intarray *arr, int elem) {
-  if (arr->cap < arr->len + 1) {
-    int cap = arr->cap;
-    arr->cap = INTARRAY_GROW_CAP(cap);
-    arr->array = intarray_grow_array(arr->array, arr->cap);
+void intarray_append(intarray *ia, int elem) {
+  if (ia->len == INT_MAX) {
+    fprintf(stderr, "uhh, how did you make such a long array, yo?");
+    exit(2);
   }
 
-  arr->array[arr->len++] = elem;
+  if (ia->cap < ia->len + 1) {
+    int cap = ia->cap;
+    ia->cap = INTARRAY_GROW_CAP(cap);
+    ia->data = intarray_grow_array(ia->data, ia->cap);
+  }
+
+  ia->data[ia->len++] = elem;
+}
+
+static int intarray_compare_reverse(const void *a, const void *b) {
+  return *(int *)b - *(int *)a;
+}
+
+void intarray_sort_descending(intarray *ia) {
+  qsort(ia->data, ia->len, sizeof(int), intarray_compare_reverse);
 }

@@ -1,11 +1,11 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "intarray.h"
 
-int compare(const void *a, const void *b) { return *(int *)b - *(int *)a; }
 
-FILE* open_file(char *filename) {
+FILE *open_file(char *filename) {
   FILE *fp = fopen(filename, "r");
   if (fp == NULL) {
     perror("could not open input");
@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  FILE* fp = open_file(argv[1]);
+  FILE *fp = open_file(argv[1]);
   ssize_t read;
   char *line = NULL;
   size_t line_len = 0;
@@ -44,9 +44,10 @@ int main(int argc, char *argv[]) {
 
   // pick up the last elf
   intarray_append(&elves, this_elf);
+  intarray_sort_descending(&elves);
 
-  qsort(elves.array, elves.len, sizeof(int), compare);
+  assert(elves.len >= 3);
 
-  printf("part 1: %d\n", elves.array[0]);
-  printf("part 2: %d\n", elves.array[0] + elves.array[1] + elves.array[2]);
+  printf("part 1: %d\n", elves.data[0]);
+  printf("part 2: %d\n", elves.data[0] + elves.data[1] + elves.data[2]);
 }
